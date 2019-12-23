@@ -1,131 +1,86 @@
-Take your device cert with private key.
-if you have an mac export it as p12 and then transform it using openssl
+# Evaluate climbers rank
 
-$ openssl pkcs12 -in Zertifikate.p12 -out Zertifikate.crt.pem -clcerts -nokeys
-reinhard@Nebuchadnezzar:~/Documents
-$ openssl pkcs12 -in Zertifikate.p12 -out Zertifikate.key.pem -nocerts -nodes
+This project uses the website https://www.digitalrock.de/ which provides a
+set of climbing competition results. From these results it allows to extrakt
+a set of competitors and list their direct competitions and their rank in
+comparison.
 
-Then modify the conf file in this folder and replace these by yours.
+# usage
 
-add route 10.78.105.152 to vpn tunnel?
-oer alles drüberlaufen lassen?
+## 0. open a terminal
 
+## 1. change to the location of the installation
 
+Command:
 
+    cd workspace/climber_rank
 
+## 2. activate your runtime environment:
 
-------
-Skip to content
-Skip to breadcrumbs
-Skip to header menu
-Skip to action menu
-Skip to quick search
-Linked Applications
-Confluence
-Spaces
-People
- Create Create
-Search
-Help
-3
+Command:
 
+    source env/bin/activate
 
-KI-Handbuch
-KI-Handbuch
+## 3. run the program
 
-PAGE TREE
-Allgemein
-Changelog
-Essen
-Events
-Mitarbeiterliste
-Organisatorische Prozesse
-Protokolle
-Tools
-Arxes Tolina VDI / Lotus Notes
-Drucken, Scannen und Faxen
-G Suite
-SalesForce
-Time-Off Management
-TK-Anlage
-VPN
-OpenVPN
-Development
-Operations
-Professional Services
-Sales
-ConfigureSpace tools
-OpenVPN
- Edit Save for later Watch Share
-Pages… VPN
-Skip to end of banner
-Go to start of banner
-Skip to end of metadata
-Created by Oliver Kohl, last modified by Michael Duin on Sep 03, 2018Go to start of metadata
-via Network Manager
-Gateways
-CA certificate
-User certificate und privat Key
-General
-Security
-TLS Authentication
-Additional TLS authentication or encryption
-via config file
-via Network Manager
-Gateways
-kira10.keyidentity.com:1194
+### 3a. Fetch the competition data
 
-kira10.keyidentity.com:1195
+in the file 'gather.py' lok for the line 'fetch_competition' and verify
+that the value is 'True'
 
-CA certificate
-LSE_CA_2015.pem
+    fetch_competitions = True
 
-User certificate und privat Key
-Es wird Euer Device Zertifikat verwendet.
+If you dont need the initial download anymore set the value to 'False'
 
-General
-Randomize remote hosts
+After the command:
 
-Security
-Cipher: AES-256-CBC
+    ./gather.py
 
-HMAC Authentication: SHA-256
+the available competitions are stored in the subdirectory 'competitions'.
 
-TLS Authentication
-Server Certificate Check: Verify name exactly
-Subject Match: kira10.keyidentity.com
+### 3b. Create an index about all participants:
 
-Additional TLS authentication or encryption
-Mode: TLS-Auth
-Key File: kira10-ta.key
-Key Direction: 1
+in the file 'gather.py' search for the 'build_participants_index' and verify that the value is set to 'True'.
 
+    build_participants_index = True
 
+If not needed anymore, the value should be set to 'False'.
 
-via config file
-1) Config File herunterladen & speichern
+After the command:
 
-client.conf
+    ./gather.py
 
-2) Config File bearbeiten:
+the file 'participants.json' has been created in the 'competitions' directory. It contains the list of all users and
+their participation in a competition with the discipline and resulting rank
 
-ca <Pfad zur LSE_CA_2015.crt>
-cert <Pfad zur device.pem>
-key <Pfad zur device.key>
+### 3c. Create the participant tabels:
 
-tls-auth <Pfad zur heruntergeladenen kira10-ta.key> 1
+in the file 'gather.py' verify that the value for 'build_participants_table' is set to 'True'
 
-3) Im NetworkManager auf "VPN hinzufügen" klicken
+    build_participants_table = True
 
-4) "Import from file" → überarbeitetes Config File auswählen
+if not needed anymore, set it to the value 'False'.
 
-5) VPN aktivieren
+In addition put in the file 'gather.py' the list of users, which should be evaluated.
 
+        . . .
+        users = []
 
+        users.append("Anna-Lena:Wolf")
+        users.append("Emilia:Merz")
+        users.append("Julanda:Peter")
 
-LikeBe the first to like this
-No labelsEdit Labels
-User icon: reinhard.spies
-Write a comment…
-Powered by Atlassian Confluence 6.15.2 Report a bug Atlassian News
-Atlassian
+Be aware, that a ':' should be added between the firstname and the lastname.
+
+After the command:
+
+    ./gather.py
+
+the following results were create in the subdirectory 'competitions'
+
+* Bouldern.csv
+* Lead.csv
+* Speed.csv
+* Combined.csv
+
+These files represent the input data for the matrix ranking evaluation 'rank.py'.
