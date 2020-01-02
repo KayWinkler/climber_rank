@@ -3,16 +3,18 @@
 #
 """
 gather
-- retreive all competitions with their participants
+- retrieve all competitions with their participants
 
 result is:
 - stored copy of the competion.json  (WetId__GrpId.json)
-- a list of all participants, with the list of all WetId__GrpId in json
+- a list of all participants, with the list of all WetId__GrpId in json format
 
-This will allow to query for a list of participants and their shared competions
-resuting in a list of competitions, where at least two participants participated.
+This will allow to query for a list of participants and their shared
+competitions resulting in a list of competitions, where at least two
+participants participated.
 
-This will then generate a matrix on all participants in the list vs the competitions
+This will then generate a matrix on all participants in the list vs.
+the competitions
 
 """
 
@@ -51,7 +53,7 @@ def gather_competition_data(comp_url, target_directory=None):
     gather all competition data from the url:
         "https://www.digitalrock.de/dav_calendar.php?no_dav=1&year=2019"
 
-    :return: - nothing - but side efect are the competition 
+    :return: - nothing - but side efect are the competition
              files in target directory
     """
 
@@ -66,7 +68,7 @@ def gather_competition_data(comp_url, target_directory=None):
         target_directory = Directory
 
         if not os.path.exists(target_directory):
-            raise Exception('directory does not exist: %r' % target_directory )
+            raise Exception('directory does not exist: %r' % target_directory)
 
     for href in get_links_from_html(html_content):
 
@@ -120,7 +122,7 @@ def add_participant(participant, gender, competition, discipline, participants):
         'name': competition,
         'rank': rank,
         'discipline': discipline
-        }
+    }
 
     PerId = participant.get("PerId")
     if PerId not in participants:
@@ -131,7 +133,7 @@ def add_participant(participant, gender, competition, discipline, participants):
             'gender': gender,
             'PerId': PerId,
             'Competitions': [comp],
-            }
+        }
     else:
         participants[PerId]['Competitions'].append(comp)
 
@@ -142,6 +144,35 @@ def is_standard_competition(json_data):
     if 'participants' in json_data:
         return True
     return False
+
+
+def get_fallback_gender(json_data):
+
+    fallback_gender = None
+    categorie_name = None
+
+    categories = json_data.get('categories', json_data.get('categorys', ''))
+
+    if "GrpId" in json_data and categories:
+        grp_id = json_data["GrpId"]
+        for categorie in categories:
+            if categorie.get("GrpId", '') == grp_id:
+                categorie_name = categorie.get('name')
+
+    if not categorie_name and 'route_name' in json_data:
+        categorie_name = json_data['route_name']
+
+    damen_exps = ['weiblich', 'D A M E N', 'W O M E N']
+    for damen_exp in damen_exps:
+        if damen_exp in categorie_name:
+            return 'Damen'
+
+    men_exps = ['männlich', 'H E R R E N', 'M E N', 'Junioren']
+    for men_exp in men_exps:
+        if men_exp in categorie_name:
+            return 'Maenner'
+
+    return fallback_gender
 
 
 def gather_std_participants(json_data, competition, participants):
@@ -155,8 +186,10 @@ def gather_std_participants(json_data, competition, participants):
 
     discipline = get_discipline(json_data.get('discipline', ''))
 
+    fallback_gender = get_fallback_gender(json_data)
+
     for participant in json_data.get('participants', []):
-        gender = get_gender(participant)
+        gender = get_gender(participant, fallback_gender)
         add_participant(
             participant, gender, competition, discipline, participants)
 
@@ -169,21 +202,40 @@ def is_compound_competition(json_data):
     return False
 
 
-def get_gender(data):
+def get_gender(data, fallback_gender=None):
     """ helper to guess the gender from the competition describing rkey"""
 
     rkey = data.get("rkey", "")
-    if re.match(r'.*F.$', rkey) or re.match(r'.*F$', rkey):
-        return 'Damen'
-    if re.match(r'.*M.$', rkey) or re.match(r'.*M$', rkey):
-        return 'Maenner'
-    return None
+
+    if not rkey:
+
+        if not fallback_gender:
+            print('unknown gender')
+
+        return fallback_gender
+
+    damen_regs = [r'.*F.$', r'.*F..$', r'.*F$', r'.*_F_.$', r'.*_F_..$']
+
+    for damen_reg in damen_regs:
+        if re.match(damen_reg, rkey):
+            return 'Damen'
+
+    herren_regs = [r'.*M.$', r'.*M..$', r'.*M$', r'.*_M_.$', r'.*_M_..$']
+
+    for herren_reg in herren_regs:
+        if re.match(herren_reg, rkey):
+            return 'Maenner'
+
+    if not fallback_gender:
+        print('unknown gender')
+
+    return fallback_gender
 
 
 def get_discipline(discipline):
-    """ 
+    """
     helper
-        guess the discipline from the competition name / description 
+        guess the discipline from the competition name / description
     """
 
     if 'boulder' in discipline.lower():
@@ -205,7 +257,7 @@ def get_discipline(discipline):
 
 def gather_compound_participants(json_data, competition, participants):
     """
-    
+
     """
 
     for categorie in json_data.get('categorys'):
@@ -221,14 +273,13 @@ def gather_compound_participants(json_data, competition, participants):
 
 def gather_participants(target_directory=None):
 
-
     if not target_directory:
         target_directory = Directory
 
     if not os.path.exists(target_directory):
         raise Exception('directory does not exist: %r' % target_directory)
 
-    # ----------------------------------------------
+    # ---------------------------------------------------------------------- --
 
     Participants = {}
 
@@ -279,15 +330,13 @@ def gather_participants(target_directory=None):
 
 def load_participants(target_directory=None):
 
-
     if not target_directory:
         target_directory = Directory
 
     if not os.path.exists(target_directory):
         raise Exception('directory does not exist: %r' % target_directory)
 
-    # ----------------------------------------------
-
+    # ---------------------------------------------------------------------- --
 
     filename = os.path.join(target_directory, "participants.json")
 
@@ -369,13 +418,11 @@ def write_csv(discipline, query_users, competitions, target_directory=None):
     if not os.path.exists(target_directory):
         raise Exception('directory does not exist: %r' % target_directory)
 
-    # ----------------------------------------------
-
+    # ---------------------------------------------------------------------- --
 
     filename = os.path.join(target_directory, discipline + '.csv')
 
     head = []
-
 
     with open(filename, "w") as f:
 
@@ -480,11 +527,10 @@ def main():
         # users = read_users()
 
         for disciplin, users, competition in get_ranking(users):
-             write_csv(disciplin, users, competition)
+            write_csv(disciplin, users, competition)
 
     print('completed')
 
 
 if __name__ == "__main__":
     main()
-
