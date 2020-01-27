@@ -100,6 +100,28 @@ def gather_competition_data(comp_url, target_directory=None):
             f.write(json.dumps(jresp, indent=4))
 
 
+def get_rank(participant, discipline):
+
+    if discipline not in ['Speed']:
+        return participant.get('result_rank', '')
+
+    results = []
+
+    for i in range(0, 10):
+        result_str = "result%d" % i
+
+        if result_str in participant:
+            try:
+                results.append(float(participant[result_str]))
+            except ValueError:
+                print('unable to derive time from %r' % 
+                      participant[result_str])
+                continue
+
+    if results:
+        return min(results)
+
+
 def add_participant(participant, gender, competition, discipline, participants):
     """
     helper
@@ -116,7 +138,7 @@ def add_participant(participant, gender, competition, discipline, participants):
 
     firstname = participant.get("firstname")
     lastname = participant.get("lastname")
-    rank = participant.get('result_rank', '')
+    rank = get_rank(participant, discipline)
 
     comp = {
         'name': competition,
